@@ -1,49 +1,133 @@
-#include <iostream>
+#include<iostream>
 #include<string>
 #include<sstream>
 #include<fstream>
 #include<iomanip>
 using namespace std ;
 
-// ============================= Queue Node Class ===============================
-class QueueNode {
-public:
-    string passengerName, CNIC, age, gender, seatNO;
-    QueueNode* next;
+// ============================ Queue and Linklist Node Class ===============================
+class Node {
+    public:
+        string passengerName, CNIC, age, gender, seatNO  , city;
+        Node* next;
 
-    QueueNode(string p, string c, string a, string g, string s) {
-        passengerName = p;
-        CNIC = c;
-        age = a;
-        gender = g;
-        seatNO = s;
+        Node(string p, string c, string a, string g, string s ,string city) {
+            passengerName = p;
+            CNIC = c;
+            age = a;
+            gender = g;
+            seatNO = s;
+            this->city=city;
+            next = NULL;
+        }
+};
+
+// ============================ GraphNode Class ===============================
+class GraphNode {
+public:
+    string city;
+    GraphNode* next;
+
+    GraphNode(string c) {
+        city = c;
         next = NULL;
     }
 };
 
-// ============================= Show Stations  Class============================== 
+
+// ============================ ShowStaions  Class ===============================
 class ShowStaions {
 
-    private :
+private:
+    static const int MAX = 20;        // max cities
+    string cities[MAX];
+    int cityCount;
+    GraphNode* adjList[MAX];
 
-    public:
+public:
+    // Constructor
+    ShowStaions() {
+        cityCount = 0;
+        for (int i = 0; i < MAX; i++)
+            adjList[i] = NULL;
 
-    // Constructor 
-        ShowStaions(){
+        readFromFile();
+    }
 
+    // Get index of city
+    int getIndex(string city) {
+        for (int i = 0; i < cityCount; i++) {
+            if (cities[i] == city)
+                return i;
         }
-// --------------------------------Show Station Function------------------------------      
-        void showStations (){
+        return -1;
+    }
 
+    // Add city if not exists
+    int addCity(string city) {
+        int index = getIndex(city);
+        if (index == -1) {
+            cities[cityCount] = city;
+            return cityCount++;
         }
+        return index;
+    }
+
+    // Add route (edge)
+    void addRoute(string from, string to) {
+        int i = addCity(from);
+        addCity(to);
+
+        GraphNode* newNode = new GraphNode(to);
+        newNode->next = adjList[i];
+        adjList[i] = newNode;
+    }
+
+    // Read routes from file
+    void readFromFile() {
+        ifstream file("routes.txt");
+        string from, to;
+
+        if (!file) {
+            cout << "Error opening routes file!" << endl;
+            return;
+        }
+
+        while (file >> from >> to) {
+            addRoute(from, to);
+        }
+
+        file.close();
+    }
+
+    // Show stations & routes
+    void showStations() {
+        system("cls");
+        cout << "\n--- TRAIN ROUTES (GRAPH FROM FILE) ---\n\n";
+
+        for (int i = 0; i < cityCount; i++) {
+            cout << cities[i] << " -> ";
+
+            GraphNode* temp = adjList[i];
+            while (temp != NULL) {
+                cout << temp->city << " ";
+                temp = temp->next;
+            }
+            cout << endl;
+        }
+
+        cout << "\nPress Enter to return...";
+        cin.ignore();
+        cin.get();
+    }
 };
 
 
 // ============================= Admin Class============================== 
 class Admin {
     private :
-        string passengerName, seatNO,CNIC , age , gender ;
-        string FilePassengerName, FileSeatNO,FileCNIC , FileAge , FileGender , line ;
+        string passengerName, seatNO,CNIC , age , gender , city;
+        string FilePassengerName, FileSeatNO,FileCNIC , FileAge , FileGender ,FileCity, line ;
     public:
     // Constructor 
         Admin(){
@@ -51,60 +135,261 @@ class Admin {
         }
  // --------------------------------Admin BookSeat Function-------------------------
 
-        void bookSeat (){
-            system("cls");
-            cin.ignore();
-            cout <<"1. passengerName \t 2.CNIC \t 3. Age \t 4.gender \t 5. SeatNo  "<<endl;
-            cout<<"Enter PassengerName here "<<endl;
-            getline(cin,passengerName);
-             cout<<"Enter CNIC here "<<endl;
-            getline(cin,CNIC);
-             cout<<"Enter AGE here "<<endl;
-            getline(cin,age);
-             cout<<"Enter Gender here "<<endl;
-            getline(cin,gender);
-             cout<<"Enter Seat NO. here "<<endl;
-            getline(cin,seatNO);
-            ofstream outfile("BookSeat.txt",ios::app);
-            if (!outfile){
-                cout <<"Error : The Booking file is not open here !!!"<<endl;
-                return;
-            }else{
-                outfile<<passengerName << '\t'<<CNIC << '\t' <<age <<'\t' <<gender <<'\t' <<seatNO<<endl;
-            }
-            outfile.close();
-            cout<<"Seat is booked !!!"<<endl;
-            cout << "\nPress Enter to return...";
-            cin.ignore();
-            cin.get();
-        }
+       void bookSeat() {
+    system("cls");
+    cin.ignore();
+    cout << "1. passengerName \t 2.CNIC \t 3. Age \t 4.gender \t 5. SeatNo \t 6. City" << endl;
+
+    cout << "Enter Passenger Name here: ";
+    getline(cin, passengerName);
+
+    cout << "Enter CNIC here: ";
+    getline(cin, CNIC);
+
+    cout << "Enter Age here: ";
+    getline(cin, age);
+
+    cout << "Enter Gender here: ";
+    getline(cin, gender);
+
+    cout << "Enter Seat No. here: ";
+    getline(cin, seatNO);
+
+    cout << "Enter City here: ";
+    string city;
+    getline(cin, city);
+
+    // Check if city exists in routes
+    ShowStaions stations;  // create stations object
+    if (stations.getIndex(city) == -1) {
+        cout << "Error: City does not exist in train routes! Booking failed." << endl;
+        cout << "\nPress Enter to return...";
+        cin.ignore();
+        cin.get();
+        return;
+    }
+
+    // If city exists, book seat
+    ofstream outfile("BookSeat.txt", ios::app);
+    if (!outfile) {
+        cout << "Error: The Booking file is not open here !!!" << endl;
+        return;
+    } else {
+        outfile << passengerName << '\t' << CNIC << '\t' << age << '\t'
+                << gender << '\t' << seatNO << '\t' << city << endl;
+    }
+    outfile.close();
+
+    cout << "Seat is booked successfully in " << city << "!" << endl;
+    cout << "\nPress Enter to return...";
+    cin.ignore();
+    cin.get();
+}
+
 // --------------------------------Admin ViewSeat Function-------------------------
-        void viewALLSeat() {
+     void viewALLSeat() {
+    ifstream infile("BookSeat.txt");
+    if (!infile) {
+        cout << "Error: Booking File is not open !!!" << endl;
+        return;
+    }
+
+    Node* front = NULL;
+    Node* rear = NULL;
+    string line;
+
+    // Read file & enqueue
+    while (getline(infile, line)) {
+        stringstream ss(line);
+        string passengerName, CNIC, age, gender, seatNO, city;
+
+        getline(ss, passengerName, '\t');
+        getline(ss, CNIC, '\t');
+        getline(ss, age, '\t');
+        getline(ss, gender, '\t');
+        getline(ss, seatNO, '\t');
+        getline(ss, city, '\t');
+
+        Node* newNode = new Node(passengerName, CNIC, age, gender, seatNO, city);
+
+        if (front == NULL) {
+            front = rear = newNode;
+        } else {
+            rear->next = newNode;
+            rear = newNode;
+        }
+    }
+    infile.close();
+
+    system("cls");
+
+    // Print headers
+    cout << left << setw(20) << "Passenger"
+         << setw(20) << "CNIC"
+         << setw(10) << "Age"
+         << setw(15) << "Gender"
+         << setw(10) << "SeatNo"
+         << setw(15) << "City" << endl;
+
+    cout << "-------------------------------------------------------------------------------" << endl;
+
+    // Display data
+    Node* temp = front;
+    while (temp != NULL) {
+        cout << left << setw(20) << temp->passengerName
+             << setw(20) << temp->CNIC
+             << setw(10) << temp->age
+             << setw(15) << temp->gender
+             << setw(10) << temp->seatNO
+             << setw(15) << temp->city << endl;
+        temp = temp->next;
+    }
+
+    // Free memory
+    while (front != NULL) {
+        temp = front;
+        front = front->next;
+        delete temp;
+    }
+
+    cout << "\nPress Enter to return...";
+    cin.ignore();
+    cin.get();
+}
+
+
+// --------------------------------Admin CancelSeat Function-----------------------
+        void cancelSeat (){
+
+            Node* head = NULL;
+            Node* tail = NULL;
 
             ifstream infile("BookSeat.txt");
-            if (!infile) {
-                cout << "Error: Booking File is not open !!!" << endl;
+            if (!infile){
+                cout <<"Error : Booking file is not open here "<<endl;
                 return;
             }
 
-            // ----------- Queue pointers -----------
-            QueueNode* front = NULL;
-            QueueNode* rear = NULL;
-
-            // ----------- Read file & enqueue -----------
-            while (getline(infile, line)) {
+            // ---------- Load file into Linked List ----------
+            while (getline(infile, line))
+            {
                 stringstream ss(line);
                 getline(ss, passengerName, '\t');
                 getline(ss, CNIC, '\t');
                 getline(ss, age, '\t');
                 getline(ss, gender, '\t');
                 getline(ss, seatNO, '\t');
+                getline(ss, city, '\t');
+                
+                Node* newNode = new Node(passengerName, CNIC, age, gender, seatNO ,city);
 
-                QueueNode* newNode = new QueueNode(
-                    passengerName, CNIC, age, gender, seatNO
+                if (head == NULL){
+                    head = tail = newNode;
+                } else {
+                    tail->next = newNode;
+                    tail = newNode;
+                }
+            }
+            infile.close();
+
+            if (head == NULL){
+                cout << "No records found!" << endl;
+                return;
+            }
+
+            // ---------- Ask CNIC ----------
+            cin.ignore();
+            cout << "Enter CNIC to cancel seat: ";
+            getline(cin, CNIC);
+
+            Node* curr = head;
+            Node* prev = NULL;
+            bool found = false;
+
+            // ---------- Search & Delete ----------
+            while (curr != NULL){
+                if (curr->CNIC == CNIC){
+                    found = true;
+
+                    // delete first node
+                    if (prev == NULL){
+                        head = curr->next;
+                    } 
+                    // delete middle or last node
+                    else {
+                        prev->next = curr->next;
+                    }
+
+                    delete curr;
+                    break;
+                }
+                prev = curr;
+                curr = curr->next;
+            }
+
+            if (!found){
+                cout << "Passenger not found!" << endl;
+                return;
+            }
+
+            // ---------- Rewrite file ----------
+            ofstream outfile("BookSeat.txt", ios::out);
+            if (!outfile){
+                cout << "Error opening file for rewrite!" << endl;
+                return;
+            }
+
+            Node* temp = head;
+            while (temp != NULL){
+                outfile << temp->passengerName << '\t'
+                        << temp->CNIC << '\t'
+                        << temp->age << '\t'
+                        << temp->gender << '\t'
+                        << temp->seatNO <<'\t'
+                        << temp->city << endl;
+                temp = temp->next;
+            }
+            outfile.close();
+
+            // ---------- Free memory ----------
+            while (head != NULL){
+                temp = head;
+                head = head->next;
+                delete temp;
+            }
+
+            cout << "Seat cancelled successfully!" << endl;
+            cout << "\nPress Enter to return...";
+            cin.get();
+        }
+
+// --------------------------------Admin UpdateSeat Function-----------------------
+        void updateSeat (){
+
+            Node* front = NULL;
+            Node* rear  = NULL;
+
+            ifstream infile("BookSeat.txt");
+            if (!infile){
+                cout << "Error: Booking file not open!" << endl;
+                return;
+            }
+
+            // ---------- Load file into Queue ----------
+            while (getline(infile, line)){
+                stringstream ss(line);
+                getline(ss, passengerName, '\t');
+                getline(ss, CNIC, '\t');
+                getline(ss, age, '\t');
+                getline(ss, gender, '\t');
+                getline(ss, seatNO, '\t');
+                getline(ss, city, '\t');
+
+                Node* newNode = new Node(
+                    passengerName, CNIC, age, gender, seatNO , city
                 );
 
-                if (front == NULL) {
+                if (front == NULL){
                     front = rear = newNode;
                 } else {
                     rear->next = newNode;
@@ -113,46 +398,47 @@ class Admin {
             }
             infile.close();
 
-            system("cls");
-
-            cout << left << setw(20) << "1. Passenger"
-                << setw(20) << "2. CNIC"
-                << setw(10) << "3. Age"
-                << setw(15) << "4. Gender"
-                << setw(10) << "5. SeatNo" << endl;
-            cout << "--------------------------------------------------------------------------------" << endl;
-
-            // ----------- Display queue -----------
-            QueueNode* temp = front;
-            while (temp != NULL) {
-                cout << left << setw(20) << temp->passengerName
-                    << setw(20) << temp->CNIC
-                    << setw(10) << temp->age
-                    << setw(15) << temp->gender
-                    << setw(10) << temp->seatNO << endl;
-                temp = temp->next;
+            // ---------- Remove first 20 persons ----------
+            int count = 0;
+            while (front != NULL && count < 20){
+                Node* temp = front;
+                front = front->next;
+                delete temp;
+                count++;
             }
 
-            // ----------- Free memory -----------
-            while (front != NULL) {
+            // ---------- Rewrite remaining data into file ----------
+            ofstream outfile("BookSeat.txt", ios::out);
+            if (!outfile){
+                cout << "Error: Cannot rewrite file!" << endl;
+                return;
+            }
+
+            Node* temp = front;
+            while (temp != NULL){
+                outfile << temp->passengerName << '\t'
+                        << temp->CNIC << '\t'
+                        << temp->age << '\t'
+                        << temp->gender << '\t'
+                        << temp->seatNO << '\t'
+                        << temp->city << endl;
+                temp = temp->next;
+            }
+            outfile.close();
+
+            // ---------- Free remaining queue ----------
+            while (front != NULL){
                 temp = front;
                 front = front->next;
                 delete temp;
             }
 
+            cout << "Update complete: First 20 passengers removed (FCFS)." << endl;
             cout << "\nPress Enter to return...";
             cin.ignore();
             cin.get();
         }
 
-// --------------------------------Admin CancelSeat Function-----------------------
-        void cancelSeat (){
-
-        }
-// --------------------------------Admin UpdateSeat Function-----------------------
-        void updateSeat (){
-
-        }
 
 // --------------------------------Admin Panel Function-----------------------
         void adminPanel (){
@@ -317,16 +603,13 @@ class AdminRegistration {
 
 // ============================= Show List Class================================
 class ShowList:Admin {
-    private:
-
     public:
     // Constructor 
         ShowList(){
-
         }
 // --------------------------------Show  List Function-----------------------
         void showList (){
-        
+            viewALLSeat();
         }
 };
 // --------------------------------Main Function-----------------------
@@ -364,7 +647,7 @@ int main(){
                 cout <<"Good bye!!! The system is exit !"<<endl;
                 break;
             
-            default:
+            default :
                 cout <<"Invalid number so enter correct number"<<endl;
                 break;
             }
